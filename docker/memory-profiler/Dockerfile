@@ -6,11 +6,12 @@ USER root
 RUN curl -sSLo /usr/local/bin/dumb-init ${DUMB_INIT} && \
     chmod +x /usr/local/bin/dumb-init
 
-FROM alpine:3
+FROM python:3.11-alpine
 
 COPY --from=entrypoint /usr/local/bin/dumb-init /usr/local/bin/dumb-init
 
-RUN apk add 'py-spy=0.3.14-r0' --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ --allow-untrusted
+RUN apk add --update build-base linux-headers && \
+    pip install -U pip 'memory-profiler<1'
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["py-spy", "--help"]
+CMD ["mprof", "--help"]
