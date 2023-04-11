@@ -24,6 +24,8 @@ jobs:
         include:
           - image-repo: ${{ github.repository_owner }}/py-spy
             context: ./docker/py-spy
+          - image-repo: ${{ github.repository_owner }}/memory-profiler
+            context: ./docker/memory-profiler
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
