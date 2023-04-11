@@ -18,7 +18,7 @@ FROM python:3.11-alpine
 COPY --from=entrypoint /usr/local/bin/dumb-init /usr/local/bin/dumb-init
 COPY --from=py-spy /usr/bin/py-spy /usr/local/bin/py-spy
 
-RUN apk add --update build-base linux-headers && \
+RUN apk add --update build-base linux-headers libunwind-dev && \
     pip install -U pip 'memory-profiler<1' 'honcho<2'
 
 ENTRYPOINT ["dumb-init", "--"]
