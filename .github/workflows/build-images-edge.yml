@@ -23,11 +23,13 @@ jobs:
       matrix:
         include:
           - image-repo: ${{ github.repository_owner }}/py-spy
-            context: ./docker/py-spy
+            context: ./services/py-spy
           - image-repo: ${{ github.repository_owner }}/memory-profiler
-            context: ./docker/memory-profiler
+            context: ./services/memory-profiler
           - image-repo: ${{ github.repository_owner }}/profiler
-            context: ./docker/profiler
+            context: ./services/profiler
+          - image-repo: ${{ github.repository_owner }}/restarter
+            context: ./services/restarter
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
