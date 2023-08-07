@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+import re
 import sys
 import time
 import traceback
@@ -45,6 +46,11 @@ def split_or_empty_list(s: str) -> list[str]:
 deployments = split_or_empty_list(os.getenv("DEPLOYMENTS", ""))
 statefulsets = split_or_empty_list(os.getenv("STATEFULSETS", ""))
 
+all_deployment_namespaces = split_or_empty_list(os.getenv("ALL_DEPLOYMENTS_IN", ""))
+all_deployment_regex = os.getenv("ALL_DEPLOYMENTS_REGEX", "")
+all_statefulset_namespaces = split_or_empty_list(os.getenv("ALL_STATEFULSETS_IN", ""))
+all_statefulset_regex = os.getenv("ALL_STATEFULSETS_REGEX", "")
+
 old_master_host = ""
 
 logger = get_logger()
@@ -56,12 +62,53 @@ def extract_namespace_and_name(s: str) -> tuple[str, str] | None:
         return rv
 
 
-def force_restart_pods():
+def get_all_deployments(namespace):
+    api_client = client.ApiClient()
+
+    return client.AppsV1Api(api_client).list_namespaced_deployment(namespace)
+
+
+def get_all_statefulsets(namespace):
+    api_client = client.ApiClient()
+
+    return client.AppsV1Api(api_client).list_namespaced_stateful_set(namespace)
+
+
+def annotate_pod_in_deployment(deployment_name, namespace):
     timestamp = str(int(time.time()))
     annotation = {"last-updated": timestamp}
 
     api_client = client.ApiClient()
 
+    new_deployment: V1Deployment = client.AppsV1Api(
+        api_client
+    ).read_namespaced_deployment(deployment_name, namespace)
+
+    new_deployment.spec.template.metadata.annotations = annotation
+
+    client.AppsV1Api(api_client).patch_namespaced_deployment(
+        deployment_name, namespace, new_deployment
+    )
+
+
+def annotate_pod_in_statefulset(statefulset_name, namespace):
+    timestamp = str(int(time.time()))
+    annotation = {"last-updated": timestamp}
+
+    api_client = client.ApiClient()
+
+    new_statefulset: V1StatefulSet = client.AppsV1Api(
+        api_client
+    ).read_namespaced_stateful_set(statefulset_name, namespace)
+
+    new_statefulset.spec.template.metadata.annotations = annotation
+
+    client.AppsV1Api(api_client).patch_namespaced_stateful_set(
+        statefulset_name, namespace, new_statefulset
+    )
+
+
+def restart_static_resources():
     logger.info("Reloading deployments: " + str(deployments))
 
     for deployment in deployments:
@@ -72,15 +119,7 @@ def force_restart_pods():
             logger.warn(warn)
             continue
 
-        new_deployment: V1Deployment = client.AppsV1Api(
-            api_client
-        ).read_namespaced_deployment(name, ns)
-
-        new_deployment.spec.template.metadata.annotations = annotation
-
-        client.AppsV1Api(api_client).patch_namespaced_deployment(
-            name, ns, new_deployment
-        )
+        annotate_pod_in_deployment(name, ns)
 
         logger.info("Deployment " + deployment + " reloaded")
 
@@ -94,17 +133,41 @@ def force_restart_pods():
             logger.warn(warn)
             continue
 
-        new_statefulset: V1StatefulSet = client.AppsV1Api(
-            api_client
-        ).read_namespaced_stateful_set(name, ns)
-
-        new_statefulset.spec.template.metadata.annotations = annotation
-
-        client.AppsV1Api(api_client).patch_namespaced_stateful_set(
-            name, ns, new_statefulset
-        )
+        annotate_pod_in_statefulset(name, ns)
 
         logger.info("Statefulset " + statefulset + " reloaded")
+
+
+def resource_name_contains(resource_name: str, regex: str) -> bool:
+    return re.search(regex, resource_name) is not None
+
+
+def restart_dynamic_resources():
+    for ns in all_deployment_namespaces:
+        for deployment in get_all_deployments(ns).items:
+            resource_name = deployment.metadata.name
+
+            if all_deployment_regex and not resource_name_contains(
+                resource_name, all_deployment_regex
+            ):
+                continue
+
+            annotate_pod_in_deployment(deployment.metadata.name, ns)
+
+            logger.info("Deployment " + deployment.metadata.name + " reloaded")
+
+    for ns in all_statefulset_namespaces:
+        for statefulset in get_all_statefulsets(ns).items:
+            resource_name = statefulset.metadata.name
+
+            if all_statefulset_regex and not resource_name_contains(
+                resource_name, all_statefulset_regex
+            ):
+                continue
+
+            annotate_pod_in_statefulset(statefulset.metadata.name, ns)
+
+            logger.info("Statefulset " + statefulset.metadata.name + " reloaded")
 
 
 def main(sentinel: Sentinel):
@@ -117,7 +180,8 @@ def main(sentinel: Sentinel):
         old_master_host = current_master_host
 
     elif current_master_host != old_master_host:
-        force_restart_pods()
+        restart_static_resources()
+        restart_dynamic_resources()
 
         old_master_host = current_master_host
 
