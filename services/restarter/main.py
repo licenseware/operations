@@ -41,14 +41,19 @@ def split_or_empty_list(s: str) -> list[str]:
         return s.split(",")
 
 
+# in the form of "namespace/name"
 deployments = split_or_empty_list(os.getenv("DEPLOYMENTS", ""))
-deployment_ns = os.getenv("DEPLOYMENT_NAMESPACE", "default")
 statefulsets = split_or_empty_list(os.getenv("STATEFULSETS", ""))
-statefulset_ns = os.getenv("STATEFULSET_NAMESPACE", "default")
 
 old_master_host = ""
 
 logger = get_logger()
+
+
+def extract_namespace_and_name(s: str) -> tuple[str, str] | None:
+    rv = s.split("/")
+    if len(rv) == 2:
+        return rv
 
 
 def force_restart_pods():
@@ -59,33 +64,47 @@ def force_restart_pods():
 
     logger.info("Reloading deployments: " + str(deployments))
 
-    for deployment_name in deployments:
-        deployment: V1Deployment = client.AppsV1Api(
-            api_client
-        ).read_namespaced_deployment(deployment_name, deployment_ns)
+    for deployment in deployments:
+        try:
+            ns, name = extract_namespace_and_name(deployment)
+        except:
+            warn = "Invalid/nonexistent deployment: {deployment}"
+            logger.warn(warn)
+            continue
 
-        deployment.spec.template.metadata.annotations = annotation
+        new_deployment: V1Deployment = client.AppsV1Api(
+            api_client
+        ).read_namespaced_deployment(name, ns)
+
+        new_deployment.spec.template.metadata.annotations = annotation
 
         client.AppsV1Api(api_client).patch_namespaced_deployment(
-            deployment_name, deployment_ns, deployment
+            name, ns, new_deployment
         )
 
-        logger.info("Deployment " + deployment_name + " reloaded")
+        logger.info("Deployment " + deployment + " reloaded")
 
     logger.info("Reloading statefulsets: " + str(statefulsets))
 
-    for statefulset_name in statefulsets:
-        statefulset: V1StatefulSet = client.AppsV1Api(
-            api_client
-        ).read_namespaced_stateful_set(statefulset_name, statefulset_ns)
+    for statefulset in statefulsets:
+        try:
+            ns, name = extract_namespace_and_name(statefulset)
+        except:
+            warn = "Invalid/nonexistent statefulset: {statefulset}"
+            logger.warn(warn)
+            continue
 
-        statefulset.spec.template.metadata.annotations = annotation
+        new_statefulset: V1StatefulSet = client.AppsV1Api(
+            api_client
+        ).read_namespaced_stateful_set(name, ns)
+
+        new_statefulset.spec.template.metadata.annotations = annotation
 
         client.AppsV1Api(api_client).patch_namespaced_stateful_set(
-            statefulset_name, statefulset_ns, statefulset
+            name, ns, new_statefulset
         )
 
-        logger.info("Statefulset " + statefulset_name + " reloaded")
+        logger.info("Statefulset " + statefulset + " reloaded")
 
 
 def main(sentinel: Sentinel):
