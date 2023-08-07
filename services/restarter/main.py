@@ -7,7 +7,7 @@ import time
 import traceback
 
 from kubernetes import client, config
-from kubernetes.client import V1Deployment, V1StatefulSet
+from kubernetes.client import V1Deployment, V1StatefulSet, exceptions
 from redis import Sentinel
 
 
@@ -80,9 +80,15 @@ def annotate_pod_in_deployment(deployment_name, namespace):
 
     api_client = client.ApiClient()
 
-    new_deployment: V1Deployment = client.AppsV1Api(
-        api_client
-    ).read_namespaced_deployment(deployment_name, namespace)
+    try:
+        new_deployment: V1Deployment = client.AppsV1Api(
+            api_client
+        ).read_namespaced_deployment(deployment_name, namespace)
+    except exceptions.ApiException as exp:
+        if exp.status == 404:
+            logger.warn(f"Deployment not found: {deployment_name}")
+            return
+        raise exp
 
     new_deployment.spec.template.metadata.annotations = annotation
 
@@ -97,9 +103,15 @@ def annotate_pod_in_statefulset(statefulset_name, namespace):
 
     api_client = client.ApiClient()
 
-    new_statefulset: V1StatefulSet = client.AppsV1Api(
-        api_client
-    ).read_namespaced_stateful_set(statefulset_name, namespace)
+    try:
+        new_statefulset: V1StatefulSet = client.AppsV1Api(
+            api_client
+        ).read_namespaced_stateful_set(statefulset_name, namespace)
+    except exceptions.ApiException as exp:
+        if exp.status == 404:
+            logger.warn(f"Statefulset not found: {statefulset_name}")
+            return
+        raise exp
 
     new_statefulset.spec.template.metadata.annotations = annotation
 
@@ -115,7 +127,7 @@ def restart_static_resources():
         try:
             ns, name = extract_namespace_and_name(deployment)
         except:
-            warn = "Invalid/nonexistent deployment: {deployment}"
+            warn = f"Invalid/nonexistent deployment: {deployment}"
             logger.warn(warn)
             continue
 
@@ -129,7 +141,7 @@ def restart_static_resources():
         try:
             ns, name = extract_namespace_and_name(statefulset)
         except:
-            warn = "Invalid/nonexistent statefulset: {statefulset}"
+            warn = f"Invalid/nonexistent statefulset: {statefulset}"
             logger.warn(warn)
             continue
 
