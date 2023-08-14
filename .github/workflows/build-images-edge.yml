@@ -30,6 +30,8 @@ jobs:
             context: ./services/profiler
           - image-repo: ${{ github.repository_owner }}/restarter
             context: ./services/restarter
+          - image-repo: ${{ github.repository_owner }}/linked-proxy-terminator
+            context: ./services/linked-proxy-terminator
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
