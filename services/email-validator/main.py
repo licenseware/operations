@@ -12,7 +12,10 @@ from settings import conf
 from tracing import init_tracing
 from validator import is_valid_domain, is_valid_email
 
-app = fastapi.FastAPI(title=conf.TRACING_SERVICE_NAME)
+app = fastapi.FastAPI(
+    title=conf.TRACING_SERVICE_NAME,
+    swagger_ui_parameters={"displayRequestDuration": True},
+)
 init_tracing(app, conf.TRACING_SERVICE_NAME)
 instrumentor = Instrumentator().instrument(app)
 logger = get_logger(conf.LOG_LEVEL)
@@ -21,6 +24,13 @@ logger = get_logger(conf.LOG_LEVEL)
 @app.on_event("startup")
 def startup():
     instrumentor.expose(app)
+
+
+@app.get("/")
+async def index():
+    return fastapi.responses.JSONResponse(
+        content={"ready": True}, status_code=http.HTTPStatus.OK
+    )
 
 
 @app.get("/validate")
