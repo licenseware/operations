@@ -38,10 +38,10 @@ async def validate(email: str):
     valid = await is_valid_domain(email) and await is_valid_email(email)
 
     if valid:
-        content = {"valid": True}
+        content = {"valid": True, "msg": "All good."}
         status_code = http.HTTPStatus.OK
     else:
-        content = {"valid": False}
+        content = {"valid": False, "msg": "Non-business email not allowed."}
         status_code = http.HTTPStatus.BAD_REQUEST
 
     return fastapi.responses.JSONResponse(content=content, status_code=status_code)
@@ -52,7 +52,7 @@ async def timeit(request: fastapi.Request, call_next):
     start_time = time.time()
     response: fastapi.Response = await call_next(request)
     process_time = time.time() - start_time
-    logger.info(
+    logger.debug(
         f"Request: {request.method} {request.url.path} | Response: {response.status_code} | Process Time: {process_time:.6f}s"
     )
     return response
