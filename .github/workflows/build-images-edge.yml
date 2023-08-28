@@ -32,6 +32,8 @@ jobs:
             context: ./services/restarter
           - image-repo: ${{ github.repository_owner }}/linkerd-proxy-terminator
             context: ./services/linkerd-proxy-terminator
+          - image-repo: ${{ github.repository_owner }}/email-validator
+            context: ./services/email-validator
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3

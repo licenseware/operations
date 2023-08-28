@@ -1,0 +1,8 @@
+async-lru==2.0
+backoff==2.2
+fastapi==0.103
+httpx==0.24
+prometheus_fastapi_instrumentator==6.1
+pydantic==2.3
+pydantic-settings==2.0
+uvicorn==0.23

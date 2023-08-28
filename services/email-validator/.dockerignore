@@ -1,0 +1,4 @@
+.docker*
+Docker*
+**/__pycache__
+**/*.py[cod]
