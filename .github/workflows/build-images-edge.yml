@@ -22,12 +22,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image-repo: ${{ github.repository_owner }}/py-spy
-            context: ./services/py-spy
+          # - image-repo: ${{ github.repository_owner }}/py-spy
+          #   context: ./services/py-spy
           - image-repo: ${{ github.repository_owner }}/memory-profiler
             context: ./services/memory-profiler
-          - image-repo: ${{ github.repository_owner }}/profiler
-            context: ./services/profiler
+          # - image-repo: ${{ github.repository_owner }}/profiler
+          #   context: ./services/profiler
           - image-repo: ${{ github.repository_owner }}/restarter
             context: ./services/restarter
           - image-repo: ${{ github.repository_owner }}/linkerd-proxy-terminator
