@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import time
 import traceback
@@ -33,8 +34,7 @@ def remove_parent_of_pod(pod: client.V1Pod):
         return
 
     try:
-        client_api = client.BatchV1Api()
-        client_api.delete_namespaced_job(parent.name, pod.metadata.namespace)
+        client.BatchV1Api().delete_namespaced_job(parent.name, pod.metadata.namespace)
         logger_, delete_status = logger.info, "Success"
     except Exception as e:
         logger_, delete_status = logger.error, "Failed"
@@ -44,10 +44,8 @@ def remove_parent_of_pod(pod: client.V1Pod):
     )
 
 
-def main():
-    client_api = client.CoreV1Api()
-
-    pods = client_api.list_pod_for_all_namespaces().items
+def terminate_orphan_pods():
+    pods = client.CoreV1Api().list_pod_for_all_namespaces().items
 
     for pod in pods:
         pod_name = pod.metadata.name
@@ -74,19 +72,56 @@ def main():
         )
 
 
-logger = get_logger()
+def terminate_unfinished_jobs():
+    jobs = client.BatchV1Api().list_job_for_all_namespaces().items
+
+    for job in jobs:
+        job_name = job.metadata.name
+        namespace = job.metadata.namespace
+
+        pods_of_job = (
+            client.CoreV1Api()
+            .list_namespaced_pod(
+                namespace=namespace, label_selector=f"job-name={job_name}"
+            )
+            .items
+        )
+
+        not_active_nor_succeeded = not job.status.active and not job.status.succeeded
+        job_has_no_pod = not pods_of_job
+
+        eligible = not_active_nor_succeeded or job_has_no_pod
+
+        if eligible:
+            try:
+                client.BatchV1Api().delete_namespaced_job(job_name, namespace)
+                logger_, delete_status = logger.info, "Success"
+            except Exception as e:
+                logger_, delete_status = logger.error, "Failed"
+
+            logger_(
+                f"Job: {job_name} Namespace: {namespace} Delete Status: {delete_status}"
+            )
+        else:
+            logger.debug(f"Job: {job_name} Namespace: {namespace} Not Eligible")
+
+
+LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+INTERVAL = int(os.environ.get("INTERVAL", 60))
+logger = get_logger(level=LEVEL)
 
 if __name__ == "__main__":
     config.load_incluster_config()
 
     while True:
         try:
-            main()
+            terminate_unfinished_jobs()
+            terminate_orphan_pods()
         except KeyboardInterrupt:
             logger.info("Exiting...")
             break
         except:
             logger.error(traceback.format_exc())
 
-        logger.info("Sleeping for 60 seconds...")
-        time.sleep(60)
+        logger.info(f"Sleeping for {INTERVAL} seconds...")
+        time.sleep(INTERVAL)
