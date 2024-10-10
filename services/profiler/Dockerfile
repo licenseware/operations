@@ -13,7 +13,7 @@ COPY --from=entrypoint /usr/local/bin/dumb-init /usr/local/bin/dumb-init
 RUN apk add 'py-spy=0.3.14-r0' --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ --allow-untrusted && which py-spy
 
 
-FROM python:3.11-alpine
+FROM python:3.13-alpine
 
 COPY --from=entrypoint /usr/local/bin/dumb-init /usr/local/bin/dumb-init
 COPY --from=py-spy /usr/bin/py-spy /usr/local/bin/py-spy
