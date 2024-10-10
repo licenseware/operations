@@ -6,7 +6,7 @@ USER root
 RUN curl -sSLo /usr/local/bin/dumb-init ${DUMB_INIT} && \
     chmod +x /usr/local/bin/dumb-init
 
-FROM python:3.11-alpine
+FROM python:3.13-alpine
 
 COPY --from=entrypoint /usr/local/bin/dumb-init /usr/local/bin/dumb-init
 
