@@ -6149,7 +6149,7 @@ async def _validate_using_verify_mail(email: str):
             logger.error(response.text)
             return False
 
-        return not response.json()["disposable"]
+        return not response.json().get("disposable")
 
 
 async def is_valid_email(email: str):
