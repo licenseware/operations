@@ -6147,20 +6147,18 @@ async def _validate_using_verify_mail(email: str):
 
         if response.status_code != http.HTTPStatus.OK:
             logger.error(response.text)
+            logger.error(response.status_code)
             return False
 
         return not response.json()["disposable"]
 
 
 async def is_valid_email(email: str):
-    try:
-        return await _validate_using_verify_mail(email)
-    except Exception as exp:
-        logger.error(exp)
-        logger.warning(
-            f"Failed querying Verify Mail, defaulting to regex. Email: {email}"
-        )
+    result = await _validate_using_verify_mail(email)
+    if not result:
+        logger.warning("Falling back to email validation using regex catalog")
         return bool(re.fullmatch(email_regex, email))
+    return result
 
 
 @trace("Verify email domain")
