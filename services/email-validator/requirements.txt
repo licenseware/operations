@@ -1,7 +1,7 @@
 async-lru==2.0.4
 backoff==2.2
 fastapi==0.109.1
-httpx==0.24
+httpx==0.28.1
 prometheus_fastapi_instrumentator==6.1
 pydantic==2.9.2
 pydantic-settings==2.0
