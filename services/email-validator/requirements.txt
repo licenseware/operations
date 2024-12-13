@@ -4,5 +4,5 @@ fastapi==0.109.1
 httpx==0.24
 prometheus_fastapi_instrumentator==6.1
 pydantic==2.9.2
-pydantic-settings==2.0
+pydantic-settings==2.7.0
 uvicorn==0.23
