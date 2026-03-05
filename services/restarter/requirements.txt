@@ -1,2 +1,2 @@
-kubernetes==26.1
+kubernetes==35.0.0
 redis==4.6
