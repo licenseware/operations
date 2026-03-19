@@ -1,4 +1,4 @@
-async-lru==2.0.4
+async-lru==2.3.0
 backoff==2.2
 fastapi==0.109.1
 httpx==0.24
